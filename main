@@ -1,0 +1,179 @@
+#define BLYNK_TEMPLATE_ID "TMPL6MzkbJecU"
+#define BLYNK_TEMPLATE_NAME "Quickstart Template"
+#define BLYNK_AUTH_TOKEN "mOGTb0eDvTkYz23QNnYXlw8vQc3cA9E9"
+#define BLYNK_PRINT Serial
+
+#include <ESP8266_Lib.h>
+#include <BlynkSimpleShieldEsp8266.h>
+
+char auth[] = BLYNK_AUTH_TOKEN;
+
+// hansen
+// char ssid[] = "Hansen-Wifi";
+// char pass[] = "HansenNWO1887";
+
+// home
+char ssid[] = "Lord Voldemodem";
+char pass[] = "Noga6Michal";
+
+#include <SoftwareSerial.h>
+SoftwareSerial EspSerial(2, 3); // RX, TX
+
+#define ESP8266_BAUD 9600
+
+ESP8266 wifi(&EspSerial);
+
+/*car init*/
+
+const int in1 = 5; // in1,2 for right wheel
+const int in2 = 6;
+const int in3 = 9; // in3,4 for left wheel
+const int in4 = 10;
+const int lineTrack = 11; // link track
+const int ledPin = 13;
+
+enum drivingMode {Control=1, SelfDriving=0};
+int previousMODE = Control;
+
+void moveForward(int speed) {
+  analogWrite(in1, 0);
+  analogWrite(in2, speed);
+  analogWrite(in3, speed);
+  analogWrite(in4, 0);
+}
+
+void moveBackward(int speed) {
+  analogWrite(in1, speed);
+  analogWrite(in2, 0);
+  analogWrite(in3, 0);
+  analogWrite(in4, speed);
+}
+
+void turnRight(int speed) {
+  analogWrite(in1, speed);
+  analogWrite(in2, 0);
+  analogWrite(in3, speed);
+  analogWrite(in4, 0);
+}
+
+void turnLeft(int speed) {
+  analogWrite(in1, 0);
+  analogWrite(in2, speed);
+  analogWrite(in3, 0);
+  analogWrite(in4, speed);
+}
+
+void stopMove() {
+  analogWrite(in1, 0);
+  analogWrite(in2, 0);
+  analogWrite(in3, 0);
+  analogWrite(in4, 0);
+}
+
+void moveLeft(int speed) {
+  analogWrite(in1, 0);
+  analogWrite(in2, speed);
+  analogWrite(in3, 0);
+  analogWrite(in4, 0);
+}
+
+void moveRight(int speed) {
+  analogWrite(in1, 0);
+  analogWrite(in2, 0);
+  analogWrite(in3, speed);
+  analogWrite(in4, 0);
+}
+
+int RIGHT = 0;
+int LEFT = 0;
+int BACKWARD = 0;
+int FORWARD = 0;
+int MODE = Control;
+
+BLYNK_WRITE(V6)
+{
+  MODE = param.asInt();
+}
+
+BLYNK_WRITE(V9)
+{
+  RIGHT = param.asInt();
+}
+
+BLYNK_WRITE(V10)
+{
+  LEFT = param.asInt();
+}
+BLYNK_WRITE(V7)
+{
+  FORWARD = param.asInt();
+}
+
+BLYNK_WRITE(V8)
+{
+  BACKWARD = param.asInt();
+}
+
+void setup()
+{
+  // Debug console
+  Serial.begin(115200);
+
+  // Set ESP8266 baud rate
+  EspSerial.begin(ESP8266_BAUD);
+  delay(10);
+
+  Blynk.begin(auth, wifi, ssid, pass);
+
+  //motor
+  pinMode(in1, OUTPUT);
+  pinMode(in2, OUTPUT);
+  pinMode(in3, OUTPUT);
+  pinMode(in4, OUTPUT);
+
+  // line track
+  pinMode(lineTrack, INPUT);
+
+  //LED
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+}
+
+void loop()
+{
+  Blynk.run();
+
+  // if (!Blynk.connected()) {
+  //   digitalWrite(ledPin, LOW);
+  //   Serial.print("offline!");
+  //   bool result = Blynk.connect();
+  //   Serial.println(result);
+  // } else {
+  //   digitalWrite(ledPin, HIGH);
+  // }
+  if (MODE != previousMODE) {
+    stopMove(); 
+    previousMODE = MODE; 
+  }
+  if (MODE == SelfDriving) {
+    int lineColor = digitalRead(lineTrack); // 0:white  1:black
+    Serial.println(lineColor); //print on the serial monitor
+    if (lineColor) {
+      moveLeft(150);
+    } else {
+      moveRight(150);
+    }
+  } else if (MODE == Control) {
+    if (FORWARD == 1) {
+        moveForward(255);
+      } else if (BACKWARD == 1) {
+        moveBackward(255);
+      } else if (RIGHT == 1) {
+        turnRight(150);
+      } else if (LEFT == 1) {
+        turnLeft(150);
+      } else {
+        stopMove();
+      }
+  } 
+}
